@@ -1,4 +1,5 @@
 
+
 async function fetchTranscriptOfficialYoutube() {
   var videoPageBody = document.body.innerHTML;
 
@@ -136,27 +137,59 @@ function convertHTMLSpecialChars(str, unescape = true) {
   }
 }
 
+const OPTION_CHUNK_INTERVAL = 120;
+const OPTION_HOW_MANY_CHUNKS = 5
 
-
-
-
-document.addEventListener("DOMContentLoaded", async () => {
-
-  var  { content, timestamps } = await fetchTranscriptOfficialYoutube();
-  console.log(content);
-
-});
-
-// press space to go to next
-document.addEventListener("keydown", async (e) => {
-  if (e.code === "Tab") {
-    e.stopPropagation();
-    e.preventDefault();
+async function addYoutubeTranscript() {
 
 
   // alert(1)
   var  { content, timestamps } = await fetchTranscriptOfficialYoutube();
-  console.log(content);
+
+  //chunk timestamps into 60s intervals and grab the offset text at for each interval
+  var chunkedTimestamps = [];
+  var chunk = [];
+  var chunkTime = 0;
+  for (var i = 0; i < timestamps.length; i++) {
+    var [offset, time] = timestamps[i];
+    if (time - chunkTime > OPTION_CHUNK_INTERVAL) {
+      chunkedTimestamps.push(chunk);
+      chunk = [];
+      chunkTime = time;
+    }
+    chunk.push([offset, time]);
+  }
+  chunkedTimestamps.push(chunk);
+
+  // for each chunk get the text at the offset beginning and last offset
+  chunkedTimestamps = chunkedTimestamps.map((chunk) => {
+    var [startOffset, startTime] = chunk[0];
+    var [endOffset, endTime] = chunk[chunk.length - 1];
+    var textAtOffset = content.substring(startOffset, endOffset).trim();
+    return [startTime, textAtOffset]
+  });
+
+  //for the first 5, pass into prompt and get summary
+
+  for (var chunk in chunkedTimestamps) {
+    var [startTime, textAtOffset] = chunkedTimestamps[chunk];
+    try{
+    var summary = await passPrompt(textAtOffset);
+    }  catch (e) {
+      console.log(e)
+    }
+
+    chunkedTimestamps[chunk].push(summary)
+
+  }
+
+  content = chunkedTimestamps.map(([startTime, textAtOffset, summary]) => {
+    return `<a  href="#" onclick="document.querySelector('video').currentTime = ${startTime}; return false;"  style="text-decoration: none; color: black;">
+    <b> ${new Date(startTime * 1000).toISOString().slice(14, 19)} </b> <br />
+    <h2>${summary}</h2> <br />
+    ${textAtOffset}</a>`;
+  }).join('<br /><br />');
+
   content = convertHTMLSpecialChars(content);
     
     // Create sidebar element
@@ -171,7 +204,8 @@ document.addEventListener("keydown", async (e) => {
     sidebar.style.color = 'black';
     sidebar.style.boxShadow = '0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)';
     sidebar.style.zIndex = '1000';
-    sidebar.innerHTML = content;
+
+    sidebar.innerHTML = content 
 
     // Create wrapper for existing content
     var contentWrapper = document.createElement('div');
@@ -197,5 +231,21 @@ document.addEventListener("keydown", async (e) => {
     // Add elements back to body
     document.body.appendChild(sidebar);
     document.body.appendChild(contentWrapper);
-  }
-});
+
+
+
+}
+
+
+async function passPrompt(content){
+  content = content.replace(/<[^>]*>?/gm, '');
+    content = content.slice(0, 1000)
+
+    var response = await fetch('http://54.176.85.238:2000/?msg='+"create unique   label of 8 to  15 words for this text and do not return anything else:" + encodeURIComponent(content))
+    var data = await response.json()
+    data = data?.content[0]?.text || " " 
+
+    return data
+
+}
+addYoutubeTranscript();
