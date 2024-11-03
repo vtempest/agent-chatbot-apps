@@ -186,8 +186,11 @@ async function addYoutubeTranscript() {
   content = chunkedTimestamps.map(([startTime, textAtOffset, summary]) => {
     return `<a  href="#" onclick="document.querySelector('video').currentTime = ${startTime}; return false;"  style="text-decoration: none; color: black;">
     <b> ${new Date(startTime * 1000).toISOString().slice(14, 19)} </b> <br />
-    <h2>${summary}</h2> <br />
-    ${textAtOffset}</a>`;
+    <h2>${summary}</h2> <br /></a>
+    <details>
+      <summary>Click to expand</summary>
+      ${textAtOffset}
+    </details>`;
   }).join('<br /><br />');
 
   content = convertHTMLSpecialChars(content);
