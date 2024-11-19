@@ -1,18 +1,18 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
-const ANTHROPIC_API_KEY = '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';
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 
 const app = express();
 const port = 3000;
 
 app.use(bodyParser.json());
 
-async function sendMessageToClaude(message) {
+async function sendMessageToGroq(message) {
   const url = 'https://api.anthropic.com/v1/messages';
   
   const requestBody = {
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'groq-3-5-sonnet-20241022',
     max_tokens: 1024,
     messages: [
       {
@@ -43,7 +43,7 @@ async function sendMessageToClaude(message) {
 app.get('/', async (req, res) => {
   try {
     const message = req.query.msg;
-    const response = await sendMessageToClaude(message);
+    const response = await sendMessageToGroq(message);
     res.status(200).send(response);
   } catch (error) {
     console.error('Error:', error);
